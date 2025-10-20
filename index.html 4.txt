@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="id">a
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Peminjaman Barang Sekolah</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .modal-backdrop {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app-container" class="bg-white rounded-2xl shadow-xl w-full max-w-5xl">
+        <!-- Login View -->
+        <div id="login-view" class="p-8 md:p-12">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-gray-800">Sistem Inventaris Sekolah</h1>
+                <p class="text-gray-500 mt-2">Silakan masuk untuk melanjutkan</p>
+            </div>
+            <form id="login-form" class="mt-8 space-y-6">
+                <div>
+                    <label for="username" class="text-sm font-medium text-gray-700">Nama Pengguna</label>
+                    <input type="text" id="username" name="username" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Contoh: admin atau siswa">
+                </div>
+                <div>
+                    <label for="password" class="text-sm font-medium text-gray-700">Kata Sandi</label>
+                    <input type="password" id="password" name="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Kata sandi: password">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">Masuk dengan OTP</button>
+            </form>
+             <div class="mt-4 text-center text-sm text-gray-600">
+                <p>Pengguna demo:</p>
+                <p>Admin: <span class="font-mono">admin</span> / <span class="font-mono">password</span></p>
+                <p>Pengguna: <span class="font-mono">siswa</span> / <span class="font-mono">password</span></p>
+            </div>
+        </div>
+
+        <!-- OTP View -->
+        <div id="otp-view" class="p-8 md:p-12 hidden">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-gray-800">Verifikasi OTP</h1>
+                <p id="otp-info" class="text-gray-500 mt-2">Kode OTP telah dikirim (disimulasikan).</p>
+                <p id="otp-display" class="mt-4 text-2xl font-bold bg-gray-100 p-3 rounded-lg inline-block"></p>
+            </div>
+            <form id="otp-form" class="mt-8 space-y-6">
+                <div>
+                    <label for="otp" class="text-sm font-medium text-gray-700">Masukkan Kode OTP 6 Digit</label>
+                    <input type="text" id="otp" name="otp" required maxlength="6" class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center text-2xl tracking-[.5em]">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">Verifikasi</button>
+                 <button type="button" id="back-to-login" class="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-300 mt-2">Kembali ke Login</button>
+            </form>
+        </div>
+
+        <!-- Main Dashboard (Container for Admin/User views) -->
+        <div id="dashboard-view" class="hidden">
+            <header class="bg-gray-50 p-4 border-b rounded-t-2xl flex justify-between items-center">
+                <h1 class="text-xl font-bold text-gray-800">Dashboard Inventaris</h1>
+                <div class="flex items-center space-x-4">
+                    <span id="user-greeting" class="text-gray-600"></span>
+                    <button id="logout-button" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300 text-sm">Keluar</button>
+                </div>
+            </header>
+            
+            <div class="p-6 md:p-8">
+                <!-- Admin Specific Controls -->
+                <div id="admin-controls" class="hidden mb-6 flex justify-between items-center">
+                    <h2 class="text-2xl font-semibold text-gray-700">Manajemen Barang</h2>
+                    <button id="show-add-item-modal-button" class="bg-green-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-600 transition duration-300">Tambah Barang</button>
+                </div>
+                 <!-- User Specific Controls -->
+                <div id="user-controls" class="hidden mb-6">
+                     <h2 class="text-2xl font-semibold text-gray-700">Barang Tersedia</h2>
+                </div>
+                
+                <!-- Inventory Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Nama Barang</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Kategori</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Kondisi</th>
+                                <th class="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">Tersedia</th>
+                                <th class="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">Total</th>
+                                <th class="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body" class="divide-y divide-gray-200">
+                            <!-- Rows will be injected by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Loans Section (Admin only) -->
+                <div id="admin-loans-section" class="hidden mt-10">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-4">Riwayat Peminjaman</h2>
+                     <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Nama Barang</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Peminjam</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Tgl Pinjam</th>
+                                    <th class="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                    <th class="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="loans-table-body" class="divide-y divide-gray-200">
+                                <!-- Loan rows will be injected by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                 <!-- Loans Section (User only) -->
+                 <div id="user-loans-section" class="hidden mt-10">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-4">Barang Pinjaman Saya</h2>
+                     <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Nama Barang</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Tgl Pinjam</th>
+                                    <th class="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-loans-table-body" class="divide-y divide-gray-200">
+                                <!-- User loan rows will be injected by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="add-item-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-8 transform scale-95">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Tambah Barang Baru</h2>
+            <form id="add-item-form" class="space-y-4">
+                <div>
+                    <label for="item-name" class="block text-sm font-medium text-gray-700">Nama Barang</label>
+                    <input type="text" id="item-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="item-category" class="block text-sm font-medium text-gray-700">Kategori</label>
+                    <input type="text" id="item-category" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="item-quantity" class="block text-sm font-medium text-gray-700">Jumlah</label>
+                    <input type="number" id="item-quantity" required min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                 <div>
+                    <label for="item-condition" class="block text-sm font-medium text-gray-700">Kondisi</label>
+                    <select id="item-condition" required class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option>Baik</option>
+                        <option>Rusak Ringan</option>
+                        <option>Rusak Berat</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancel-add-item-button" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Batal</button>
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Notification Toast -->
+    <div id="notification-toast" class="fixed bottom-5 right-5 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300">
+        <p id="notification-message"></p>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- STATE MANAGEMENT ---
+    let currentUser = null;
+    let generatedOtp = null;
+    let pendingUser = null;
+
+    // --- MOCK DATABASE ---
+    const users = [
+        { username: 'admin', password: 'password', role: 'admin' },
+        { username: 'siswa', password: 'password', role: 'user' }
+    ];
+
+    let inventory = [
+        { id: 1, name: 'Proyektor Epson', category: 'Elektronik', condition: 'Baik', total: 5, available: 5 },
+        { id: 2, name: 'Laptop Dell XPS', category: 'Elektronik', condition: 'Baik', total: 10, available: 8 },
+        { id: 3, name: 'Bola Basket', category: 'Olahraga', condition: 'Baik', total: 15, available: 15 },
+        { id: 4, name: 'Gitar Akustik', category: 'Alat Musik', condition: 'Rusak Ringan', total: 3, available: 2 },
+        { id: 5, name: 'Mikroskop', category: 'Laboratorium', condition: 'Baik', total: 20, available: 19 },
+    ];
+
+    let loans = [
+        { loanId: 1, itemId: 2, userId: 'siswa', borrowDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID'), status: 'dipinjam' },
+        { loanId: 2, itemId: 4, userId: 'guru', borrowDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID'), status: 'dikembalikan' },
+        { loanId: 3, itemId: 5, userId: 'siswa', borrowDate: new Date().toLocaleDateString('id-ID'), status: 'dipinjam' },
+    ];
+
+    // --- DOM ELEMENTS ---
+    const loginView = document.getElementById('login-view');
+    const otpView = document.getElementById('otp-view');
+    const dashboardView = document.getElementById('dashboard-view');
+    
+    const loginForm = document.getElementById('login-form');
+    const otpForm = document.getElementById('otp-form');
+    const otpDisplay = document.getElementById('otp-display');
+    const backToLoginButton = document.getElementById('back-to-login');
+
+    const userGreeting = document.getElementById('user-greeting');
+    const logoutButton = document.getElementById('logout-button');
+    
+    const adminControls = document.getElementById('admin-controls');
+    const userControls = document.getElementById('user-controls');
+    const inventoryTableBody = document.getElementById('inventory-table-body');
+
+    const adminLoansSection = document.getElementById('admin-loans-section');
+    const loansTableBody = document.getElementById('loans-table-body');
+    const userLoansSection = document.getElementById('user-loans-section');
+    const userLoansTableBody = document.getElementById('user-loans-table-body');
+
+    const addItemModal = document.getElementById('add-item-modal');
+    const addItemForm = document.getElementById('add-item-form');
+    const showAddItemModalButton = document.getElementById('show-add-item-modal-button');
+    const cancelAddItemButton = document.getElementById('cancel-add-item-button');
+    
+    const notificationToast = document.getElementById('notification-toast');
+    const notificationMessage = document.getElementById('notification-message');
+
+    // --- VIEW MANAGEMENT ---
+    function showView(view) {
+        loginView.classList.add('hidden');
+        otpView.classList.add('hidden');
+        dashboardView.classList.add('hidden');
+        view.classList.remove('hidden');
+    }
+
+    // --- NOTIFICATION ---
+    function showNotification(message, isError = false) {
+        notificationMessage.textContent = message;
+        notificationToast.classList.toggle('bg-red-500', isError);
+        notificationToast.classList.toggle('bg-green-500', !isError);
+        notificationToast.classList.remove('opacity-0', 'translate-y-20');
+        
+        setTimeout(() => {
+            notificationToast.classList.add('opacity-0', 'translate-y-20');
+        }, 3000);
+    }
+
+    // --- RENDER FUNCTIONS ---
+    function renderInventory() {
+        inventoryTableBody.innerHTML = '';
+        inventory.forEach(item => {
+            const row = document.createElement('tr');
+            row.className = item.available === 0 ? 'bg-gray-100' : '';
+            
+            let actionButton = '';
+            if (currentUser.role === 'admin') {
+                actionButton = `
+                    <button class="text-blue-600 hover:underline text-sm font-medium" onclick="alert('Fitur edit belum diimplementasikan')">Edit</button>
+                    <button class="text-red-600 hover:underline text-sm font-medium ml-2" onclick="alert('Fitur hapus belum diimplementasikan')">Hapus</button>
+                `;
+            } else {
+                actionButton = `<button data-item-id="${item.id}" class="borrow-button bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600 disabled:bg-gray-400" ${item.available === 0 ? 'disabled' : ''}>Pinjam</button>`;
+            }
+
+            row.innerHTML = `
+                <td class="py-3 px-4">
+                    <div class="font-medium text-gray-900">${item.name}</div>
+                </td>
+                <td class="py-3 px-4 text-gray-600">${item.category}</td>
+                <td class="py-3 px-4">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.condition === 'Baik' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                        ${item.condition}
+                    </span>
+                </td>
+                <td class="py-3 px-4 text-center font-semibold text-lg ${item.available > 0 ? 'text-green-600' : 'text-red-600'}">${item.available}</td>
+                <td class="py-3 px-4 text-center text-gray-600">${item.total}</td>
+                <td class="py-3 px-4 text-center">${actionButton}</td>
+            `;
+            inventoryTableBody.appendChild(row);
+        });
+    }
+
+    function renderLoans() {
+        if (currentUser.role === 'admin') {
+            loansTableBody.innerHTML = '';
+            const allLoans = [...loans].reverse();
+            allLoans.forEach(loan => {
+                const item = inventory.find(i => i.id === loan.itemId);
+                const row = document.createElement('tr');
+                const isReturned = loan.status === 'dikembalikan';
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4 text-gray-800">${item.name}</td>
+                    <td class="py-3 px-4 text-gray-600">${loan.userId}</td>
+                    <td class="py-3 px-4 text-gray-600">${loan.borrowDate}</td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isReturned ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800'}">
+                            ${loan.status}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <button data-loan-id="${loan.loanId}" class="return-button bg-green-500 text-white px-3 py-1 rounded-md text-sm hover:bg-green-600 disabled:bg-gray-400" ${isReturned ? 'disabled' : ''}>
+                            Kembalikan
+                        </button>
+                    </td>
+                `;
+                loansTableBody.appendChild(row);
+            });
+        } else {
+             userLoansTableBody.innerHTML = '';
+             const userLoans = loans.filter(l => l.userId === currentUser.username && l.status === 'dipinjam').reverse();
+             if (userLoans.length === 0) {
+                 userLoansTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Anda tidak memiliki pinjaman aktif.</td></tr>';
+                 return;
+             }
+             userLoans.forEach(loan => {
+                const item = inventory.find(i => i.id === loan.itemId);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                     <td class="py-3 px-4 text-gray-800">${item.name}</td>
+                     <td class="py-3 px-4 text-gray-600">${loan.borrowDate}</td>
+                     <td class="py-3 px-4 text-center">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                           ${loan.status}
+                        </span>
+                     </td>
+                `;
+                 userLoansTableBody.appendChild(row);
+             });
+        }
+    }
+
+    function setupDashboard() {
+        userGreeting.textContent = `Halo, ${currentUser.username}!`;
+        if (currentUser.role === 'admin') {
+            adminControls.classList.remove('hidden');
+            userControls.classList.add('hidden');
+            adminLoansSection.classList.remove('hidden');
+            userLoansSection.classList.add('hidden');
+        } else {
+            adminControls.classList.add('hidden');
+            userControls.classList.remove('hidden');
+            adminLoansSection.classList.add('hidden');
+            userLoansSection.classList.remove('hidden');
+        }
+        renderInventory();
+        renderLoans();
+        showView(dashboardView);
+    }
+    
+    // --- EVENT HANDLERS ---
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = e.target.username.value;
+        const password = e.target.password.value;
+        
+        const user = users.find(u => u.username === username && u.password === password);
+        
+        if (user) {
+            pendingUser = user;
+            generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+            otpDisplay.textContent = generatedOtp;
+            showView(otpView);
+        } else {
+            showNotification('Nama pengguna atau kata sandi salah.', true);
+        }
+    });
+    
+    backToLoginButton.addEventListener('click', () => {
+        loginForm.reset();
+        otpForm.reset();
+        pendingUser = null;
+        generatedOtp = null;
+        showView(loginView);
+    });
+
+    otpForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const otp = e.target.otp.value;
+        if (otp === generatedOtp) {
+            currentUser = pendingUser;
+            pendingUser = null;
+            generatedOtp = null;
+            otpForm.reset();
+            showNotification('Login berhasil!');
+            setupDashboard();
+        } else {
+            showNotification('Kode OTP salah.', true);
+        }
+    });
+    
+    logoutButton.addEventListener('click', () => {
+        currentUser = null;
+        loginForm.reset();
+        showView(loginView);
+        showNotification('Anda telah keluar.');
+    });
+
+    showAddItemModalButton.addEventListener('click', () => {
+        addItemForm.reset();
+        addItemModal.classList.remove('hidden');
+        addItemModal.querySelector('.modal-content').classList.remove('scale-95');
+    });
+
+    cancelAddItemButton.addEventListener('click', () => {
+        addItemModal.classList.add('hidden');
+        addItemModal.querySelector('.modal-content').classList.add('scale-95');
+    });
+
+    addItemForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newItem = {
+            id: inventory.length + 1,
+            name: e.target['item-name'].value,
+            category: e.target['item-category'].value,
+            condition: e.target['item-condition'].value,
+            total: parseInt(e.target['item-quantity'].value, 10),
+            available: parseInt(e.target['item-quantity'].value, 10)
+        };
+        inventory.push(newItem);
+        renderInventory();
+        addItemModal.classList.add('hidden');
+        showNotification('Barang baru berhasil ditambahkan!');
+    });
+    
+    // --- DYNAMIC EVENT LISTENERS (for borrow/return buttons) ---
+    document.body.addEventListener('click', (e) => {
+        // Handle borrowing
+        if (e.target.classList.contains('borrow-button')) {
+            const itemId = parseInt(e.target.dataset.itemId, 10);
+            const item = inventory.find(i => i.id === itemId);
+            if (item && item.available > 0) {
+                item.available--;
+                const newLoan = {
+                    loanId: loans.length + 1,
+                    itemId: itemId,
+                    userId: currentUser.username,
+                    borrowDate: new Date().toLocaleDateString('id-ID'),
+                    status: 'dipinjam'
+                };
+                loans.push(newLoan);
+                renderInventory();
+                renderLoans();
+                showNotification(`Anda berhasil meminjam ${item.name}.`);
+            } else {
+                 showNotification(`Maaf, ${item.name} tidak tersedia.`, true);
+            }
+        }
+
+        // Handle returning (for admin)
+        if (e.target.classList.contains('return-button')) {
+            const loanId = parseInt(e.target.dataset.loanId, 10);
+            const loan = loans.find(l => l.loanId === loanId);
+            if (loan && loan.status === 'dipinjam') {
+                loan.status = 'dikembalikan';
+                const item = inventory.find(i => i.id === loan.itemId);
+                if (item) {
+                    item.available++;
+                }
+                renderInventory();
+                renderLoans();
+                showNotification(`${item.name} telah dikembalikan.`);
+            }
+        }
+    });
+
+
+    // --- INITIALIZE APP ---
+    showView(loginView);
+});
+</script>
+
+</body>
+</html>
